@@ -1,0 +1,16 @@
+%SER算法-q0=1
+u=0.05*0.51;%u*λav
+a=0.93;
+q0=1;
+%设置起始值
+Q{1}=q0*eye(2);%Q0的逆矩阵的起始值
+for i=1:k-1
+    xk(i,:)=[sin(2*pi*i/N)+rk(i+1) sin(2*pi*(i-1)/N)+rk(i)];%输入信号
+    yk(i)=xk(i,:)*wk(i,:)';%输出信号
+    dk(i)=2*cos(2*pi*i/N);%期望信号
+    err(i)=dk(i)-yk(i);%误差
+    S{i}=Q{i}*xk(i,:)';%xk本为列向量
+    v{i}=a+xk(i,:)*S{i};
+    Q{i+1}=(1/a)*(Q{i}-S{i}*S{i}'/v{i});
+    wk(i+1,:)=wk(i,:)+2*u*(1-a^(i+1))*err(i)*xk(i,:)*Q{i+1}/(1-a);
+end

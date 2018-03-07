@@ -1,0 +1,43 @@
+clc;
+clear all;
+%初始化
+iter=200;%迭代次数
+N=16;%采样个数
+u0=0.05;u1=0.1;%各级步长
+rk=sqrt(0.01)*randn(1,iter);%功率为0.01的随机噪声
+aa=mean(rk.*rk)
+
+k0=zeros(1,iter);%设置初始权值
+k1=zeros(1,iter);
+p0=0.51;p1=0.5*cos(2*pi/N);p2=0.5*cos(4*pi/N);
+R=[p0 p1 p2;p1 p0 p1;p2 p1 p0];
+%信号的格型表达
+S0(1)=sin(2*pi/N)+rk(1);S0(2)=sin(4*pi/N)+rk(2);   %用前两个点的值预测后面那个点
+s0(1)=sin(2*pi/N)+rk(1);s0(2)=sin(4*pi/N)+rk(2);%s0代表S'
+%LatticeLMS算法迭代
+for i=3:iter
+    xk(i)=sin(2*pi*i/N)+rk(i);
+    S0(i)=xk(i);
+    s0(i)=xk(i);%s0代表S'
+    S1(i)=S0(i)+k0(i).*s0(i-1);%s0代表S'
+    s1(i-1)=k0(i-1).*S0(i-1)+s0(i-2);%s0代表S'
+    S2(i)=S1(i)+k1(i).*s1(i-1);%s0代表S'
+    k0(i+1)=k0(i)-2*u0*S1(i).*s0(i-1);
+    k1(i+1)=k1(i)-2*u1* S2(i).*s1(i-1);
+end
+SS2=mean(S2.*S2);    %S2是前向预测误差
+%----------------画图-----------------------------------------------------
+x=-2.0:0.005:0.5;
+y=-2:0.012:4;
+[x y]=meshgrid(x,y);
+%求性能表面
+MSE=(y.^2+1).*[(x.^2+1).*p0+2*x.*p1]+2*y.*[x.^2.*p0+2*x.*p1+p2];
+%画性能表面的等高线
+figure,contour(x,y,MSE,[0.048 0.06 0.095 0.172 0.224 0.272 0.6]);%等高线图
+%画权值迭代轨迹
+hold on;
+plot(k0,k1,'r');
+title('LatticeLMS');
+xlabel('权，k0');
+ylabel('权，k1');
+text(0,0,'起始点');

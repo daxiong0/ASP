@@ -1,0 +1,66 @@
+clc;
+clear all;
+%初始化
+iter=100;%迭代次数
+N=16;%采样个数
+u=0.05;%步长
+alpha=0.9;
+p0=0.51;p1=0.5*cos(2*pi/N);p2=0.5*cos(4*pi/N);
+rk=sqrt(0.01)*randn(1,iter);%功率为0.01的随机噪声
+k0=zeros(1,iter);%设置初始权值
+k1=zeros(1,iter);%设置初始权值
+P0(2)=0.5;%估计的信号功率
+P1(2)=0.5;
+S0(1)=sin(2*pi/N)+rk(1);S0(2)=sin(4*pi/N)+rk(2);
+s0(1)=sin(2*pi/N)+rk(1);s0(2)=sin(4*pi/N)+rk(2);%s0代表S'
+%LatticeSER算法迭代
+for i=3:iter
+    xk(i)=sin(2*pi*i/N)+rk(i);
+    S0(i)=xk(i);
+    s0(i)=xk(i);
+    P0(i)=((1-alpha)*xk(i).^2+alpha*(1-alpha^(i)).*P0(i-1))./(1-alpha^(i+1))
+    k0(i+1)=k0(i)-u*[S0(i).*s0(i-1)+k0(i).*s0(i-1).^2]./P0(i);
+    S1(i)=S0(i)+k0(i).*s0(i-1);
+    s1(i-1)=k0(i-1).*S0(i-1)+s0(i-2);
+    S2(i)=S1(i)+k1(i).*s1(i-1);
+    P1(i)=((1-alpha)*S1(i).^2 +alpha*(1-alpha^(i)).*P1(i-1))./(1-alpha^(i+1))
+    k1(i+1)=k1(i)-u*(S2(i).*s1(i-1))./P1(i);
+end
+%----------------画图-----------------------------------------------------
+x=-2.0:0.005:0.5;
+y=-2:0.012:4;
+[x y]=meshgrid(x,y);
+%求性能表面
+MSE=(y.^2+1).*[(x.^2+1).*p0+2*x.*p1]+2*y.*[x.^2.*p0+2*x.*p1+p2];
+%画性能表面的等高线
+figure,contour(x,y,MSE,[0.048 0.06 0.095 0.172 0.224 0.272 0.06]);%等高线图
+%画权值迭代轨迹
+hold on;
+plot(k0,k1,'r');
+title('LatticeSER');
+xlabel('权，k0');
+ylabel('权，k1');
+text(0,0,'起始点');
+%---------------LatticeLMS算法---------------------------------------------
+%信号的格型表达
+K0=zeros(1,iter);%设置初始权值
+K1=zeros(1,iter);%设置初始权值
+SS0(1)=sin(2*pi/N)+rk(1);SS0(2)=sin(4*pi/N)+rk(2);
+ss0(1)=sin(2*pi/N)+rk(1);ss0(2)=sin(4*pi/N)+rk(2);
+%LatticeLMS算法迭代
+for i=3:iter
+    xk(i)=sin(2*pi*i/N)+rk(i);
+    SS0(i)=xk(i);
+    ss0(i)=xk(i);
+    SS1(i)=SS0(i)+K0(i).*ss0(i-1);
+    ss1(i-1)=K0(i-1).*SS0(i-1)+ss0(i-2);
+    SS2(i)=SS1(i)+K1(i).*ss1(i-1);
+    K0(i+1)=K0(i)-0.05*SS1(i).*ss0(i-1);
+    K1(i+1)=K1(i)-0.1* SS2(i).*ss1(i-1);
+end
+%----------------画图-----------------------------------------------------
+hold on;
+plot(K0,K1,'b');
+legend('contour','LatticeSER','LatticeLMS');
+
+

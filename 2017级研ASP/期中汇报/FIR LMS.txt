@@ -1,0 +1,38 @@
+clear,clc;
+N=16;u=0.05;
+%设置迭代次数k
+k=100;
+rk=sqrt(0.01)*randn(1,k);%%正态分布的随机矩阵
+pha=0.01;%pha为随机噪声的平均功率
+%设置起始权值
+wk(1,:)=[6 -9];
+for i=1:k-1
+    xk(i,:)=[sin(2*pi*i/N)+rk(i+1) sin(2*pi*(i-1)/N)+rk(i)];%输入信号
+    yk(i)=xk(i,:)*wk(i,:)';%输出信号
+    dk(i)=2*cos(2*pi*i/N);%期望信号
+    err(i)=dk(i)-yk(i);%误差
+    wk(i+1,:)=wk(i,:)+2*u*err(i)*xk(i,:);%用LMS算法迭代求最佳权值
+end
+
+
+
+
+
+%LMS/Newton算法
+N=16;u=0.05;
+%设置迭代次数k
+k=100;
+%设置起始权值
+wk(1,:)=[6 -9];
+for i=1:k-1
+    R=[0.5+pha,0.5*cos(2*pi/N);0.5*cos(2*pi/N),0.5+pha];
+    r=inv(R);
+    a=0.51;%λav
+    xk(i,:)=[sin(2*pi*i/N)+rk(i+1) sin(2*pi*(i-1)/N)+rk(i)];%输入信号
+    yk(i)=xk(i,:)*wk(i,:)';%输出信号
+    dk(i)=2*cos(2*pi*i/N);%期望信号
+    err(i)=dk(i)-yk(i);%误差
+    wk(i+1,:)=wk(i,:)+2*u*a*err(i)*xk(i,:)*r;%用LMSNewton算法迭代求最佳权值
+end
+
+

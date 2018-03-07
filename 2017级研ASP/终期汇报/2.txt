@@ -1,0 +1,100 @@
+%原始输入为非平稳男唱歌信号+与三角波相关的噪声，参考输入为基频为200hz的三角波
+%不分帧
+clear all;
+clc;
+close all;
+%读入语音
+[x,fs]=audioread('mansing.wav');
+%采样点数
+N=floor(length(x)/40)*40-240;
+x=x(1:N);                      %非平稳男唱歌信号
+ss=sum(x.^2)/N;                  %信号功率
+
+t1=0:1/fs:(N-1)/fs;
+%H(z)
+n=52;
+hn=3:n;
+hn=1./hn; %以下为系统函数h(n)
+
+%产生三角波
+v=zeros(1,N);
+t=0:20;
+vv1=1/20*t;
+vv2=fliplr(vv1);
+vv=[vv1 vv2(2:20)];
+for i=1:N/40
+    v(1+(i-1)*40:i*40)=vv;
+end
+nn=sum(v.^2)/N;
+SNR=10*log10(ss/nn);
+%滤波器参数初始化
+M=100;%滤波器阶数
+step=0.0001;%步长
+
+yn =zeros(1,N-M+1);
+
+%滤波输出d(n)
+d=filter(hn,1,v);
+%     dn=d(1:5*fs)+Noise;
+dn=d;
+x1=x'+dn;                  %未噪声对消的音频
+sound(x1,fs);
+% audiowrite('yuansishuru-13.5.wav',x1,fs);
+% 	dn=conv(v,hn);
+%系数初始值
+w=zeros(M,N-M+1);
+w(:,1)=0.5;
+
+%LMS算法
+
+for k=M:N                     %可以从40开始
+    un=v(1,k:-1:k-M+1);
+    un=un';
+    yn(k-M+1)=w(:,k-M+1)'*un;
+    err(k-M+1)=x1(k-M+1)-yn(k-M+1);
+    %MSE(i,k-M+1)=err(k).^2;
+    %迭代
+    w(:,k+1-M+1)=w(:,k-M+1)+2*step*un*err(k-M+1);
+    %         /(1+un'*un)
+end
+%     plot(err(1:10000));
+%     dd=filter(w(:,23952),1,v);
+%     out=x1-dd;
+sound(err,fs);
+audiowrite('quzaoshuchu100.wav',err,fs);
+N1=length(err);
+%------------------------------画出纯净信号、有噪声的信号和去噪后的信号
+figure(1)
+subplot 311
+plot(t1,x);
+xlabel('时间/s');
+ylabel('幅度');
+title('纯语音信号');
+%
+subplot 312
+plot(t1,x1);
+xlabel('时间/s');
+ylabel('幅度');
+title('有幅度为1的三角波干扰的语音信号');
+subplot 313
+plot(t1(1:N1),err);
+axis([0 8 -1 1]);
+xlabel('时间/s');
+ylabel('幅度');
+title('去除三角波干扰的语音信号');
+
+%画各权值收敛曲线，仅取了前四个权进行分析
+figure(2);
+plot(1:length(w),w(1,:),'g',1:length(w),w(2,:),'r',1:length(w),w(3,:),'b',1:length(w),w(4,:));
+legend('第一个权收敛','第二个权收敛','第三个权收敛','第四个权收敛');
+title('取四个权画的权值收敛曲线');
+xlabel('k,迭代次数');
+ylabel('w,权值');
+%画学习曲线
+figure(3)
+plot(err.^2);
+xlabel('k,迭代次数');
+ylabel('输出功率');
+title('学习曲线');
+
+
